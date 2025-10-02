@@ -1,14 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
-import { MessageCircle, Settings, Loader2, Check, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MessageCircle, Settings, Loader2, AlertCircle, Check, Phone, Link } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface WhatsAppConfig {
   number: string;
@@ -27,36 +28,47 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
   const [isOpen, setIsOpen] = useState(false);
+  const [inputFormat, setInputFormat] = useState<'phone' | 'link'>('phone');
 
-  // Carregar configurações atuais
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+
   const loadConfig = async () => {
     try {
       setLoading(true);
       setError('');
       
-      const response = await fetch('/api/admin/config');
-      const data = await response.json();
+      const response = await fetch(`${API_BASE}/admin/config`);
+      const result = await response.json();
       
-      if (data.success) {
-        setConfig(data.data.whatsapp);
-      } else {
-        setError(data.error || 'Erro ao carregar configurações');
+      if (result.success && result.data.whatsapp) {
+        setConfig(result.data.whatsapp);
+        // Detectar formato automaticamente
+        if (result.data.whatsapp.number.startsWith('https://wa.me/')) {
+          setInputFormat('link');
+        } else {
+          setInputFormat('phone');
+        }
       }
     } catch (err) {
-      setError('Erro de conexão ao carregar configurações');
+      setError('Erro ao carregar configurações');
+      console.error('Erro ao carregar config:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Salvar configurações
   const saveConfig = async () => {
     try {
       setSaving(true);
       setError('');
       setSuccess('');
-      
-      const response = await fetch('/api/admin/config/whatsapp', {
+
+      if (!isValidInput) {
+        setError('Por favor, insira um número ou link válido');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE}/admin/config/whatsapp`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -66,35 +78,44 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
           enabled: config.enabled,
         }),
       });
-      
-      const data = await response.json();
-      
-      if (data.success) {
+
+      const result = await response.json();
+
+      if (result.success) {
         setSuccess('Configurações salvas com sucesso!');
-        setConfig(data.data);
-        setTimeout(() => {
-          setSuccess('');
-          setIsOpen(false);
-        }, 2000);
+        setTimeout(() => setSuccess(''), 3000);
       } else {
-        setError(data.error || 'Erro ao salvar configurações');
+        setError(result.error || 'Erro ao salvar configurações');
       }
     } catch (err) {
-      setError('Erro de conexão ao salvar configurações');
+      setError('Erro de conexão com o servidor');
+      console.error('Erro ao salvar config:', err);
     } finally {
       setSaving(false);
     }
   };
 
-  // Validar formato do número (aceita celular e fixo)
-  const validateNumber = (number: string): boolean => {
-    // Aceita tanto celular (9 dígitos) quanto fixo (8 dígitos) após o DDD
+  // Validar formato do número tradicional (aceita celular e fixo)
+  const validatePhoneNumber = (number: string): boolean => {
     const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
     return phoneRegex.test(number);
   };
 
-  // Formatar número enquanto digita
+  // Validar formato do link WhatsApp
+  const validateWhatsAppLink = (link: string): boolean => {
+    const linkRegex = /^https:\/\/wa\.me\/\d{10,15}$/;
+    return linkRegex.test(link);
+  };
+
+  // Validação geral baseada no formato selecionado
+  const isValidInput = inputFormat === 'phone' 
+    ? validatePhoneNumber(config.number)
+    : validateWhatsAppLink(config.number);
+
+  // Formatar número enquanto digita (apenas para formato phone)
   const formatNumber = (value: string): string => {
+    if (inputFormat === 'link') return value;
+    
     // Remove tudo que não é número
     const numbers = value.replace(/\D/g, '');
     
@@ -111,11 +132,39 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
   };
 
   const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatNumber(e.target.value);
-    setConfig(prev => ({ ...prev, number: formatted }));
+    const value = e.target.value;
+    if (inputFormat === 'phone') {
+      const formatted = formatNumber(value);
+      setConfig(prev => ({ ...prev, number: formatted }));
+    } else {
+      setConfig(prev => ({ ...prev, number: value }));
+    }
   };
 
-  const isValidNumber = validateNumber(config.number);
+  const handleFormatChange = (format: 'phone' | 'link') => {
+    setInputFormat(format);
+    setConfig(prev => ({ ...prev, number: '' }));
+  };
+
+  const getPlaceholder = () => {
+    return inputFormat === 'phone' 
+      ? "(98) 99999-9999 ou (98) 3216-4000"
+      : "https://wa.me/559831981530";
+  };
+
+  const getValidationMessage = () => {
+    if (!config.number) return '';
+    
+    if (inputFormat === 'phone') {
+      return !validatePhoneNumber(config.number) 
+        ? "Formato inválido. Use: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX"
+        : '';
+    } else {
+      return !validateWhatsAppLink(config.number)
+        ? "Formato inválido. Use: https://wa.me/559831981530"
+        : '';
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -171,23 +220,48 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
               <CardHeader>
                 <CardTitle className="text-lg">Número do WhatsApp</CardTitle>
                 <CardDescription>
-                  Número que receberá e enviará as mensagens com os resultados dos testes (aceita celular e fixo)
+                  Número que receberá e enviará as mensagens com os resultados dos testes
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp-number">Número (com DDD) - Celular ou Fixo</Label>
+                  <Label htmlFor="format-select">Formato de Entrada</Label>
+                  <Select value={inputFormat} onValueChange={handleFormatChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="phone">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4" />
+                          Número Tradicional
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="link">
+                        <div className="flex items-center gap-2">
+                          <Link className="w-4 h-4" />
+                          Link WhatsApp
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp-number">
+                    {inputFormat === 'phone' ? 'Número (com DDD)' : 'Link do WhatsApp'}
+                  </Label>
                   <Input
                     id="whatsapp-number"
-                    type="tel"
-                    placeholder="(98) 99999-9999 ou (98) 3216-4000"
+                    type={inputFormat === 'phone' ? 'tel' : 'url'}
+                    placeholder={getPlaceholder()}
                     value={config.number}
                     onChange={handleNumberChange}
-                    className={!isValidNumber && config.number ? 'border-red-300' : ''}
+                    className={!isValidInput && config.number ? 'border-red-300' : ''}
                   />
-                  {!isValidNumber && config.number && (
+                  {getValidationMessage() && (
                     <p className="text-sm text-red-600">
-                      Formato inválido. Use: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+                      {getValidationMessage()}
                     </p>
                   )}
                 </div>
@@ -216,8 +290,8 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-900 mb-2">💡 Dicas importantes:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Use um número válido e ativo do WhatsApp (celular ou fixo)</li>
-                <li>• Inclua o DDD da sua região</li>
+                <li>• <strong>Formato Tradicional:</strong> Use (XX) XXXXX-XXXX para celular ou (XX) XXXX-XXXX para fixo</li>
+                <li>• <strong>Link WhatsApp:</strong> Use https://wa.me/559831981530 (com código do país)</li>
                 <li>• Números fixos também podem ter WhatsApp Business</li>
                 <li>• Teste o envio após configurar</li>
                 <li>• Mantenha o WhatsApp sempre conectado</li>
@@ -234,12 +308,12 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
               </Button>
               <Button
                 onClick={saveConfig}
-                disabled={saving || !isValidNumber || !config.number}
+                disabled={saving || !isValidInput}
                 className="bg-green-600 hover:bg-green-700"
               >
                 {saving ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Salvando...
                   </>
                 ) : (

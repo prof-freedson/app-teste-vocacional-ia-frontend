@@ -86,8 +86,9 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
     }
   };
 
-  // Validar formato do número
+  // Validar formato do número (aceita celular e fixo)
   const validateNumber = (number: string): boolean => {
+    // Aceita tanto celular (9 dígitos) quanto fixo (8 dígitos) após o DDD
     const phoneRegex = /^\(\d{2}\)\s\d{4,5}-\d{4}$/;
     return phoneRegex.test(number);
   };
@@ -170,23 +171,23 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
               <CardHeader>
                 <CardTitle className="text-lg">Número do WhatsApp</CardTitle>
                 <CardDescription>
-                  Número que receberá e enviará as mensagens com os resultados dos testes
+                  Número que receberá e enviará as mensagens com os resultados dos testes (aceita celular e fixo)
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp-number">Número (com DDD)</Label>
+                  <Label htmlFor="whatsapp-number">Número (com DDD) - Celular ou Fixo</Label>
                   <Input
                     id="whatsapp-number"
                     type="tel"
-                    placeholder="(98) 99999-9999"
+                    placeholder="(98) 99999-9999 ou (98) 3216-4000"
                     value={config.number}
                     onChange={handleNumberChange}
                     className={!isValidNumber && config.number ? 'border-red-300' : ''}
                   />
                   {!isValidNumber && config.number && (
                     <p className="text-sm text-red-600">
-                      Formato inválido. Use: (XX) XXXXX-XXXX
+                      Formato inválido. Use: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
                     </p>
                   )}
                 </div>
@@ -215,8 +216,9 @@ export function WhatsAppConfigModal({ trigger }: WhatsAppConfigModalProps) {
             <div className="bg-blue-50 p-4 rounded-lg">
               <h4 className="font-medium text-blue-900 mb-2">💡 Dicas importantes:</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• Use um número válido e ativo do WhatsApp</li>
+                <li>• Use um número válido e ativo do WhatsApp (celular ou fixo)</li>
                 <li>• Inclua o DDD da sua região</li>
+                <li>• Números fixos também podem ter WhatsApp Business</li>
                 <li>• Teste o envio após configurar</li>
                 <li>• Mantenha o WhatsApp sempre conectado</li>
               </ul>

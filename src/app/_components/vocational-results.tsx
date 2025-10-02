@@ -3,12 +3,11 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, Download, MessageCircle, Home, Share } from 'lucide-react';
+import { Download, MessageCircle, Home, Share, Loader2 } from 'lucide-react';
 import { VocationalData } from '@/types/vocational-data.type';
 import ReactMarkdown from 'react-markdown';
 import { WhatsAppConfirmationModal } from './whatsapp-confirmation-modal';
+import { WhatsAppQRCode } from '@/components/WhatsAppQRCode';
 
 interface VocationalResultsProps {
   vocationalData: VocationalData;
@@ -19,8 +18,7 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
   const [results, setResults] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [whatsapp, setWhatsapp] = useState(vocationalData.whatsapp || '');
-  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [whatsappMessage, setWhatsappMessage] = useState<string>('');
   const [modalState, setModalState] = useState<{
     isOpen: boolean;
     type: 'success' | 'error' | 'validation';
@@ -34,6 +32,12 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
   useEffect(() => {
     generateResults();
   }, []);
+
+  useEffect(() => {
+    if (results) {
+      generateWhatsAppMessage();
+    }
+  }, [results]);
 
   const generateResults = async () => {
     try {
@@ -75,19 +79,8 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
     }
   };
 
-  const sendToWhatsApp = async () => {
-    if (!whatsapp.trim()) {
-      setModalState({
-        isOpen: true,
-        type: 'validation',
-        message: 'Por favor, informe seu número do WhatsApp para receber os resultados.'
-      });
-      return;
-    }
-
+  const generateWhatsAppMessage = async () => {
     try {
-      setSendingWhatsApp(true);
-      
       // 1. Obter configurações do Senac para informações de contato
       const configResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333"}/admin/config`);
       let senacInfo = {
@@ -113,32 +106,19 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
         `Site: ${senacInfo.website}\n\n` +
         `💡 *Que tal dar o próximo passo na sua carreira? Entre em contato conosco para mais informações sobre os cursos recomendados!*`;
       
-      // 3. Criar link wa.me para o número do USUÁRIO
-      const cleanUserNumber = whatsapp.replace(/\D/g, '');
-      const encodedMessage = encodeURIComponent(finalMessage);
-      
-      // Verificar se o número tem código do país, se não tiver, adicionar +55
-      const userNumber = cleanUserNumber.startsWith('55') ? cleanUserNumber : `55${cleanUserNumber}`;
-      const whatsappUrl = `https://wa.me/${userNumber}?text=${encodedMessage}`;
-      
-      // Abrir WhatsApp do usuário
-      window.open(whatsappUrl, '_blank');
-      
-      setModalState({
-        isOpen: true,
-        type: 'success',
-        message: '🎉 Abrindo seu WhatsApp com os resultados!\n\n📱 Sua mensagem está pronta para ser enviada. Basta tocar em "Enviar" no WhatsApp para receber os resultados no seu celular.'
-      });
+      setWhatsappMessage(finalMessage);
       
     } catch (err) {
-      console.error('Erro ao enviar para WhatsApp:', err);
-      setModalState({
-        isOpen: true,
-        type: 'error',
-        message: 'Ocorreu um erro ao abrir o WhatsApp. Verifique se o número está correto e tente novamente.'
-      });
-    } finally {
-      setSendingWhatsApp(false);
+      console.error('Erro ao gerar mensagem WhatsApp:', err);
+      const fallbackMessage = `🎓 *SENAC MARANHÃO - RESULTADO DO TESTE VOCACIONAL*\n\n` +
+        `👤 *Olá, ${vocationalData.nome}!*\n\n` +
+        `📊 *SEUS RESULTADOS:*\n` +
+        `${results}\n\n` +
+        `📞 *Dúvidas? Entre em contato:*\n` +
+        `Telefone: (98) 3216-4000\n` +
+        `Site: www.ma.senac.br\n\n` +
+        `💡 *Que tal dar o próximo passo na sua carreira? Entre em contato conosco para mais informações sobre os cursos recomendados!*`;
+      setWhatsappMessage(fallbackMessage);
     }
   };
 
@@ -237,7 +217,7 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
           </Card>
         </motion.div>
 
-        {/* WhatsApp Section */}
+        {/* WhatsApp QR Code Section */}
         {results && !loading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -252,41 +232,18 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1">
-                    <Label htmlFor="whatsapp">Número do WhatsApp (com DDD)</Label>
-                    <Input
-                      id="whatsapp"
-                      type="tel"
-                      placeholder="(98) 99999-9999"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
-                    />
-                    <p className="text-sm text-gray-600 mt-1">
-                      Digite seu número para receber os resultados diretamente
-                    </p>
-                  </div>
-                  <Button 
-                    onClick={sendToWhatsApp}
-                    disabled={sendingWhatsApp}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {sendingWhatsApp ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <MessageCircle className="w-4 h-4 mr-2" />
-                        Enviar Resultados
-                      </>
-                    )}
-                  </Button>
+                <div className="text-center">
+                  <p className="text-gray-600 mb-4">
+                    📱 Escaneie o QR Code com seu celular para receber os resultados no WhatsApp
+                  </p>
+                  <WhatsAppQRCode 
+                     phoneNumber="5598999999999" // Número do Senac Maranhão
+                     message={whatsappMessage}
+                   />
+                  <p className="text-sm text-gray-500 mt-4">
+                    💡 Abra a câmera do seu celular e aponte para o QR Code acima
+                  </p>
                 </div>
-                <p className="text-sm text-gray-500 mt-2">
-                  📱 Receba seus resultados completos no WhatsApp para consultar quando quiser
-                </p>
               </CardContent>
             </Card>
           </motion.div>

@@ -40,7 +40,7 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
       setLoading(true);
       setError('');
 
-      const response = await fetch('http://localhost:3333/vocational-test', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333"}/vocational-test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +89,7 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
       setSendingWhatsApp(true);
       
       // 1. Obter configurações do Senac para informações de contato
-      const configResponse = await fetch('http://localhost:3333/admin/config');
+      const configResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333"}/admin/config`);
       let senacInfo = {
         phone: '(98) 3216-4000',
         website: 'www.ma.senac.br'

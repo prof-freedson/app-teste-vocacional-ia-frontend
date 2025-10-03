@@ -96,28 +96,81 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
         };
       }
       
-      // 2. Criar mensagem personalizada com os resultados
-      const finalMessage = `🎓 *SENAC MARANHÃO - RESULTADO DO TESTE VOCACIONAL*\n\n` +
-        `👤 *Olá, ${vocationalData.nome}!*\n\n` +
-        `📊 *SEUS RESULTADOS:*\n` +
-        `${results}\n\n` +
-        `📞 *Dúvidas? Entre em contato:*\n` +
-        `Telefone: ${senacInfo.phone}\n` +
-        `Site: ${senacInfo.website}\n\n` +
-        `💡 *Que tal dar o próximo passo na sua carreira? Entre em contato conosco para mais informações sobre os cursos recomendados!*`;
+      // 2. Tentar extrair cursos recomendados do JSON estruturado primeiro
+      let cursosRecomendados = '';
+      let hasCourseRecommendations = false;
+      
+      try {
+        // Tentar parsear como JSON primeiro (novo formato dos agentes)
+        const jsonMatch = results.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const resultData = JSON.parse(jsonMatch[0]);
+          
+          if (resultData.trilhas_recomendadas && resultData.trilhas_recomendadas.length > 0) {
+            const cursos: string[] = [];
+            resultData.trilhas_recomendadas.forEach((trilha: any) => {
+              if (trilha.cursos && trilha.cursos.length > 0) {
+                trilha.cursos.slice(0, 3).forEach((curso: any) => {
+                  cursos.push(curso.nome);
+                });
+              }
+            });
+            
+            if (cursos.length > 0) {
+              cursosRecomendados = cursos.join(', ');
+              hasCourseRecommendations = true;
+            }
+          }
+        }
+      } catch (jsonError) {
+        console.log('Não foi possível parsear JSON, tentando extração de texto...');
+      }
+      
+      // 3. Fallback: extrair cursos do texto (formato antigo)
+      if (!hasCourseRecommendations) {
+        const cursosMatch = results.match(/(?:Cursos Recomendados|Recomendações de Cursos|CURSOS SUGERIDOS)[:\s]*\n([\s\S]*?)(?=\n\n|\n#|$)/i);
+        
+        if (cursosMatch && cursosMatch[1]) {
+          const linhasCursos = cursosMatch[1].split('\n').filter(linha => linha.trim()).slice(0, 3);
+          const cursosExtraidos = linhasCursos.map(linha => linha.replace(/^[-*•]\s*/, '').trim()).filter(curso => curso);
+          
+          if (cursosExtraidos.length > 0) {
+            cursosRecomendados = cursosExtraidos.join(', ');
+            hasCourseRecommendations = true;
+          }
+        }
+      }
+      
+      // 4. Criar mensagem baseada na disponibilidade de recomendações
+      let finalMessage;
+      
+      if (hasCourseRecommendations && cursosRecomendados) {
+        // Mensagem com cursos recomendados
+        finalMessage = `🎓 *SENAC MARANHÃO*\n\n` +
+          `Olá, ${vocationalData.nome}! 👋\n\n` +
+          `✅ *Cursos recomendados para você:*\n${cursosRecomendados}\n\n` +
+          `Obrigado por fazer nosso teste vocacional! Entre em contato conosco para saber mais sobre os cursos e se inscrever.\n\n` +
+          `📞 ${senacInfo.phone}\n` +
+          `🌐 ${senacInfo.website}`;
+      } else {
+        // Mensagem orientando contato quando não há recomendações específicas
+        finalMessage = `🎓 *SENAC MARANHÃO*\n\n` +
+          `Olá, ${vocationalData.nome}! 👋\n\n` +
+          `Obrigado por fazer nosso teste vocacional! Temos várias opções de cursos na área de ${vocationalData.area_interesse} que podem ser ideais para você.\n\n` +
+          `Entre em contato conosco para uma orientação personalizada e conheça todas as oportunidades disponíveis.\n\n` +
+          `📞 ${senacInfo.phone}\n` +
+          `🌐 ${senacInfo.website}`;
+      }
       
       setWhatsappMessage(finalMessage);
       
     } catch (err) {
       console.error('Erro ao gerar mensagem WhatsApp:', err);
-      const fallbackMessage = `🎓 *SENAC MARANHÃO - RESULTADO DO TESTE VOCACIONAL*\n\n` +
-        `👤 *Olá, ${vocationalData.nome}!*\n\n` +
-        `📊 *SEUS RESULTADOS:*\n` +
-        `${results}\n\n` +
-        `📞 *Dúvidas? Entre em contato:*\n` +
-        `Telefone: (98) 3216-4000\n` +
-        `Site: www.ma.senac.br\n\n` +
-        `💡 *Que tal dar o próximo passo na sua carreira? Entre em contato conosco para mais informações sobre os cursos recomendados!*`;
+      const fallbackMessage = `🎓 *SENAC MARANHÃO*\n\n` +
+        `Olá, ${vocationalData.nome}! 👋\n\n` +
+        `Obrigado por fazer nosso teste vocacional! Entre em contato conosco para conhecer os cursos ideais para seu perfil na área de ${vocationalData.area_interesse}.\n\n` +
+        `📞 (98) 3216-4000\n` +
+        `🌐 www.ma.senac.br`;
       setWhatsappMessage(fallbackMessage);
     }
   };
@@ -237,7 +290,7 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
                     📱 Escaneie o QR Code com seu celular para receber os resultados no WhatsApp
                   </p>
                   <WhatsAppQRCode 
-                     phoneNumber="5598999999999" // Número do Senac Maranhão
+                     phoneNumber="559831981530" // Número oficial do Senac Maranhão
                      message={whatsappMessage}
                    />
                   <p className="text-sm text-gray-500 mt-4">

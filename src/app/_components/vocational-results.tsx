@@ -145,32 +145,29 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
       let finalMessage;
       
       if (hasCourseRecommendations && cursosRecomendados) {
-        // Mensagem com cursos recomendados
-        finalMessage = `🎓 *SENAC MARANHÃO*\n\n` +
-          `Olá, ${vocationalData.nome}! 👋\n\n` +
-          `✅ *Cursos recomendados para você:*\n${cursosRecomendados}\n\n` +
-          `Obrigado por fazer nosso teste vocacional! Entre em contato conosco para saber mais sobre os cursos e se inscrever.\n\n` +
-          `📞 ${senacInfo.phone}\n` +
-          `🌐 ${senacInfo.website}`;
+        // Mensagem com cursos recomendados usando o novo padrão
+        const cursosFormatados = cursosRecomendados.split('\n').map(curso => `• ${curso.replace('• ', '')}`).join('\n');
+        
+        finalMessage = `Olá! Meu nome é ${vocationalData.nome} e fiz o Teste Vocacional do Senac Maranhão na Expoindustria 2025.\n\n` +
+          `Baseado no meu perfil, o teste indicou que tenho afinidade com os seguintes cursos:\n\n${cursosFormatados}\n\n` +
+          `Gostaria de receber mais informações sobre esses cursos e as próximas turmas disponíveis.\n\n` +
+          `Obrigado(a)!`;
       } else {
         // Mensagem orientando contato quando não há recomendações específicas
-        finalMessage = `🎓 *SENAC MARANHÃO*\n\n` +
-          `Olá, ${vocationalData.nome}! 👋\n\n` +
-          `Obrigado por fazer nosso teste vocacional! Temos várias opções de cursos na área de ${vocationalData.area_interesse} que podem ser ideais para você.\n\n` +
-          `Entre em contato conosco para uma orientação personalizada e conheça todas as oportunidades disponíveis.\n\n` +
-          `📞 ${senacInfo.phone}\n` +
-          `🌐 ${senacInfo.website}`;
+        finalMessage = `Olá! Meu nome é ${vocationalData.nome} e fiz o Teste Vocacional do Senac Maranhão na Expoindustria 2025.\n\n` +
+          `Baseado no meu perfil, o teste indicou que tenho afinidade com cursos na área de ${vocationalData.area_interesse}.\n\n` +
+          `Gostaria de receber mais informações sobre os cursos disponíveis e as próximas turmas.\n\n` +
+          `Obrigado(a)!`;
       }
       
       setWhatsappMessage(finalMessage);
       
     } catch (err) {
       console.error('Erro ao gerar mensagem WhatsApp:', err);
-      const fallbackMessage = `🎓 *SENAC MARANHÃO*\n\n` +
-        `Olá, ${vocationalData.nome}! 👋\n\n` +
-        `Obrigado por fazer nosso teste vocacional! Entre em contato conosco para conhecer os cursos ideais para seu perfil na área de ${vocationalData.area_interesse}.\n\n` +
-        `📞 (98) 3216-4000\n` +
-        `🌐 www.ma.senac.br`;
+      const fallbackMessage = `Olá! Meu nome é ${vocationalData.nome} e fiz o Teste Vocacional do Senac Maranhão na Expoindustria 2025.\n\n` +
+        `Baseado no meu perfil, o teste indicou que tenho afinidade com cursos na área de ${vocationalData.area_interesse}.\n\n` +
+        `Gostaria de receber mais informações sobre os cursos disponíveis e as próximas turmas.\n\n` +
+        `Obrigado(a)!`;
       setWhatsappMessage(fallbackMessage);
     }
   };
@@ -262,7 +259,87 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
                       strong: ({ children }) => <strong className="font-semibold text-gray-800">{children}</strong>,
                     }}
                   >
-                    {results}
+                    {(() => {
+                      try {
+                        // Tentar extrair apenas o texto da análise vocacional, ignorando JSON
+                        const jsonMatch = results.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                          const resultData = JSON.parse(jsonMatch[0]);
+                          
+                          // Se há análise vocacional estruturada, formatá-la como texto legível
+                          if (resultData.analise_vocacional) {
+                            let formattedText = `# Análise do Seu Perfil Vocacional\n\n`;
+                            
+                            if (resultData.analise_vocacional.perfil_vocacional) {
+                              const perfil = resultData.analise_vocacional.perfil_vocacional;
+                              formattedText += `## Seu Perfil\n\n`;
+                              formattedText += `**Tipo de Personalidade:** ${perfil.tipo_personalidade}\n\n`;
+                              
+                              if (perfil.areas_afinidade && perfil.areas_afinidade.length > 0) {
+                                formattedText += `**Áreas de Afinidade:**\n`;
+                                perfil.areas_afinidade.forEach((area: string) => {
+                                  formattedText += `• ${area}\n`;
+                                });
+                                formattedText += `\n`;
+                              }
+                              
+                              if (perfil.habilidades_principais && perfil.habilidades_principais.length > 0) {
+                                formattedText += `**Suas Principais Habilidades:**\n`;
+                                perfil.habilidades_principais.forEach((habilidade: string) => {
+                                  formattedText += `• ${habilidade}\n`;
+                                });
+                                formattedText += `\n`;
+                              }
+                              
+                              if (perfil.valores_profissionais && perfil.valores_profissionais.length > 0) {
+                                formattedText += `**Valores Profissionais:**\n`;
+                                perfil.valores_profissionais.forEach((valor: string) => {
+                                  formattedText += `• ${valor}\n`;
+                                });
+                                formattedText += `\n`;
+                              }
+                              
+                              if (perfil.estilo_trabalho) {
+                                formattedText += `**Estilo de Trabalho:** ${perfil.estilo_trabalho}\n\n`;
+                              }
+                            }
+                            
+                            // Adicionar recomendações de carreira
+                            if (resultData.recomendacoes_carreira && resultData.recomendacoes_carreira.length > 0) {
+                              formattedText += `## Carreiras Recomendadas\n\n`;
+                              resultData.recomendacoes_carreira.forEach((carreira: any) => {
+                                formattedText += `### ${carreira.area}\n\n`;
+                                if (carreira.profissoes && carreira.profissoes.length > 0) {
+                                  formattedText += `**Profissões sugeridas:**\n`;
+                                  carreira.profissoes.forEach((profissao: string) => {
+                                    formattedText += `• ${profissao}\n`;
+                                  });
+                                }
+                                if (carreira.justificativa) {
+                                  formattedText += `\n${carreira.justificativa}\n\n`;
+                                }
+                              });
+                            }
+                            
+                            // Adicionar pontos fortes
+                            if (resultData.pontos_fortes && resultData.pontos_fortes.length > 0) {
+                              formattedText += `## Seus Pontos Fortes\n\n`;
+                              resultData.pontos_fortes.forEach((ponto: string) => {
+                                formattedText += `• ${ponto}\n`;
+                              });
+                            }
+                            
+                            return formattedText;
+                          }
+                        }
+                        
+                        // Fallback: retornar o texto original se não conseguir parsear
+                        return results;
+                      } catch (error) {
+                        // Se houver erro no parsing, retornar o texto original
+                        return results;
+                      }
+                    })()}
                   </ReactMarkdown>
                 </div>
               )}

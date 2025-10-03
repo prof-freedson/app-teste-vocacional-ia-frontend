@@ -31,7 +31,7 @@ export default function TestQRPage() {
           <h2 className="text-lg font-semibold mb-4">Teste 3: QR Code com Mensagem Longa</h2>
           <WhatsAppQRCode 
             phoneNumber={testPhone}
-            message="🎓 SENAC MARANHÃO - RESULTADO DO TESTE VOCACIONAL\n\n👤 Olá, João!\n\n📊 SEUS RESULTADOS:\nVocê tem perfil para área de Tecnologia da Informação.\n\n📞 Dúvidas? Entre em contato:\nTelefone: (98) 3216-4000\nSite: www.ma.senac.br"
+            message="Olá! Meu nome é João e fiz o Teste Vocacional do Senac Maranhão na Expoindustria 2025.\n\nBaseado no meu perfil, o teste indicou que tenho afinidade com os seguintes cursos:\n\n• Assistente de Tecnologias da Informação\n• Formação - Programação em Python\n• Introdução à Informática Windows e Office\n\nGostaria de receber mais informações sobre esses cursos e as próximas turmas disponíveis.\n\nObrigado(a)!"
           />
         </div>
 

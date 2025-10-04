@@ -13,8 +13,8 @@ interface VocationalTestProps {
     nome: string;
     idade: number;
     escolaridade: string;
-    area_interesse: string;
-    disponibilidade: string;
+    area_interesse: string[];
+    disponibilidade: string[];
   };
   onComplete: (data: VocationalData) => void;
   onBack: () => void;
@@ -72,12 +72,12 @@ export default function VocationalTest({ basicInfo, onComplete, onBack }: Vocati
           nome: basicInfo.nome,
           idade: basicInfo.idade,
           escolaridade: basicInfo.escolaridade as "fundamental" | "medio" | "superior" | "pos_graduacao",
-          area_interesse: basicInfo.area_interesse as "tecnologia" | "saude" | "educacao" | "negocios" | "arte_design" | "gastronomia" | "beleza_estetica" | "turismo_hospitalidade" | "industria" | "servicos",
+          area_interesse: basicInfo.area_interesse[0] as "tecnologia" | "saude" | "educacao" | "negocios" | "arte_design" | "gastronomia" | "beleza_estetica" | "turismo_hospitalidade" | "industria" | "servicos",
           habilidades: skills.length > 0 ? skills : ['Habilidades diversas'],
           personalidade: personalidadeValida as "colaborativo" | "analitico" | "criativo" | "comunicativo" | "lider" | "detalhista" | "inovador" | "empreendedor",
           experiencia: 'Baseado nas respostas do teste',
-          objetivos: objectives.join(', ') || basicInfo.area_interesse,
-          disponibilidade: basicInfo.disponibilidade as "integral" | "matutino" | "vespertino" | "noturno" | "fins_de_semana",
+          objetivos: objectives.join(', ') || basicInfo.area_interesse.join(', '),
+          disponibilidade: basicInfo.disponibilidade[0] as "integral" | "matutino" | "vespertino" | "noturno" | "fins_de_semana",
           respostas_teste: finalAnswers,
           whatsapp: undefined
         };

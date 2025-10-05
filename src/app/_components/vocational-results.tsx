@@ -399,7 +399,7 @@ export function VocationalResults({ vocationalData, onBackToHome }: VocationalRe
             
             <Button onClick={onBackToHome} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700">
               <Home className="w-4 h-4" />
-              Fazer Novo Teste
+              Voltar para Tela Inicial
             </Button>
           </motion.div>
         )}
